@@ -1,45 +1,89 @@
 // App.js
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, Platform } from 'react-native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Import des écrans
+// --- IMPORT DES ÉCRANS ---
 import LoginScreen from './src/screens/LoginScreen';
-import SignUpScreen from './src/screens/SignUpScreen'; // <--- NOUVEAU : Import de l'écran d'inscription
+import SignUpScreen from './src/screens/SignUpScreen'; // Nouveau de ton collègue
 import HomeScreen from './src/screens/HomeScreen';
 import DetailsScreen from './src/screens/DetailsScreen';
 import ProProfileScreen from './src/screens/ProProfileScreen';
 import BookingScreen from './src/screens/bookingScreen';
-import ActivityScreen from './src/screens/ActivityScreen'; 
+import ActivityScreen from './src/screens/ActivityScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PaymentScreen from './src/screens/PaymentScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
+import SupportScreen from './src/screens/SupportScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// 1. COULEURS & THEME
+const COLORS = {
+  primary: '#2196f3',
+  secondary: '#FF6584',
+  background: '#f8f9fa',
+  text: '#333333',
+  white: '#ffffff',
+  tabBar: '#ffffff',
+};
+
+const MyTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: COLORS.background,
+  },
+};
+
+// 2. CONFIGURATION DES ONGLETS (Tabs)
 function HomeTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false, 
-        tabBarActiveTintColor: '#2196f3', 
-        tabBarInactiveTintColor: 'gray', 
-        tabBarStyle: { paddingBottom: 5, height: 60 },
-      
-        tabBarIcon: ({ color, size }) => {
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: 'gray',
+        tabBarShowLabel: false,
+        
+        // Style de la barre "Flottante"
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: 25,
+          left: 20,
+          right: 20,
+          elevation: 5,
+          backgroundColor: COLORS.tabBar,
+          borderRadius: 15,
+          height: 70,
+          ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 10 },
+          }),
+        },
+
+        // Logique des icônes
+        tabBarIcon: ({ color, size, focused }) => {
           let iconName;
           
           if (route.name === 'Accueil') {
-            iconName = 'home';
+            iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Activité') {
-            iconName = 'file-document-outline';
+            iconName = focused ? 'file-document' : 'file-document-outline';
           } else if (route.name === 'Profil') {
-            iconName = 'account'; // <--- NOUVEAU : Icône pour le profil
+            iconName = focused ? 'account-cog' : 'account-cog-outline';
           }
-          
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+
+          return (
+            <View style={{ alignItems: 'center', justifyContent: 'center', top: 0 }}>
+              <MaterialCommunityIcons name={iconName} size={30} color={color} />
+            </View>
+          );
         },
       })}
     >
@@ -50,50 +94,87 @@ function HomeTabs() {
   );
 }
 
+// 3. NAVIGATION PRINCIPALE
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar style="dark" />
-      <Stack.Navigator initialRouteName="LoginScreen">  
+    <NavigationContainer theme={MyTheme}>
+      <StatusBar style="auto" /> 
+      
+      <Stack.Navigator 
+        initialRouteName="LoginScreen"
+        screenOptions={{
+          // Options par défaut pour tous les écrans du Stack
+          headerStyle: { backgroundColor: COLORS.primary },
+          headerTintColor: COLORS.white,
+          headerTitleStyle: { fontWeight: 'bold' },
+          headerBackTitleVisible: false, // Cache le texte "Retour" sur iOS
+          animation: 'slide_from_right', // Animation fluide
+        }}
+      >
         
-        {/* Écran de Connexion */}
+        {/* --- AUTHENTIFICATION --- */}
         <Stack.Screen 
-          name="LoginScreen" // J'ai renommé "Login" en "LoginScreen" pour correspondre à ton fichier, mais "Login" marche aussi tant que c'est cohérent
+          name="LoginScreen" 
           component={LoginScreen} 
           options={{ headerShown: false }} 
         />
 
-        {/* NOUVEAU : Écran d'Inscription */}
         <Stack.Screen 
           name="SignUpScreen" 
           component={SignUpScreen} 
           options={{ headerShown: false }} 
         />
 
-        {/* L'Application Principale (avec les onglets en bas) */}
+        {/* --- APP PRINCIPALE (TABS) --- */}
         <Stack.Screen 
           name="HomeApp" 
           component={HomeTabs} 
           options={{ headerShown: false }} 
         />
 
-        {/* Écrans de Détails (Navigation interne) */}
+        {/* --- ÉCRANS SECONDAIRES --- */}
         <Stack.Screen 
           name="Details" 
           component={DetailsScreen} 
-          options={{ title: 'Recherche' }} 
+          options={{ title: 'Recherche détaillée' }} 
         />
         
         <Stack.Screen 
-            name="ProProfile" 
-            component={ProProfileScreen} 
-            options={({ route }) => ({ title: route.params?.proData?.name || 'Profil Prestataire' })} 
+          name="ProProfile" 
+          component={ProProfileScreen} 
+          options={({ route }) => ({ 
+            title: route.params?.proData?.name || 'Profil Pro',
+          })} 
         />
         
         <Stack.Screen 
-            name="Booking" 
-            component={BookingScreen} 
-            options={{ title: 'Demande' }} 
+          name="Booking" 
+          component={BookingScreen} 
+          options={{ title: 'Réservation' }} 
+        />
+
+        <Stack.Screen 
+          name="EditProfile" 
+          component={EditProfileScreen} 
+          options={{ title: 'Modifier mon profil' }} 
+        />
+
+        <Stack.Screen 
+          name="PaymentMethods" 
+          component={PaymentScreen} 
+          options={{ title: 'Moyens de paiement' }} 
+        />
+
+        <Stack.Screen 
+          name="Notifications" 
+          component={NotificationsScreen} 
+          options={{ title: 'Notifications' }} 
+        />
+
+        <Stack.Screen 
+          name="Support" 
+          component={SupportScreen} 
+          options={{ title: 'Aide & Support' }} 
         />
 
       </Stack.Navigator>
