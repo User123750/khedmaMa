@@ -6,23 +6,58 @@ import {
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  Image, 
   KeyboardAvoidingView, 
-  Platform 
+  Platform,
+  Alert,
+  ActivityIndicator 
 } from 'react-native';
+
+// Importation des fonctions Firebase
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../config/firebase'; 
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false); 
 
-  const handleLogin = () => {
-    // Plus tard, on connectera ça à ton API .NET
-    console.log("Login avec :", email, password);
-    navigation.replace('HomeApp');
-    // Pour l'instant, on simule une connexion réussie
-    // .replace() est mieux que .navigate() ici car on ne veut pas 
-    // que l'utilisateur puisse revenir au login en faisant "Retour"
-   
+  const handleLogin = async () => {
+    if(email === '' || password === '') {
+        Alert.alert("Erreur", "Veuillez remplir tous les champs");
+        return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Connexion via Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      console.log("Connecté avec succès, UID:", user.uid);
+      
+      // Redirection vers l'accueil
+      navigation.replace('HomeApp'); 
+
+    } catch (error) {
+      console.error(error);
+      let errorMessage = "Une erreur est survenue.";
+      // Traduction des erreurs Firebase courantes
+      if (error.code === 'auth/invalid-email') errorMessage = "Format d'email invalide.";
+      if (error.code === 'auth/user-not-found') errorMessage = "Utilisateur introuvable.";
+      if (error.code === 'auth/wrong-password') errorMessage = "Mot de passe incorrect.";
+      if (error.code === 'auth/invalid-credential') errorMessage = "Identifiants incorrects.";
+      if (error.code === 'auth/too-many-requests') errorMessage = "Trop de tentatives. Réessayez plus tard.";
+      
+      Alert.alert("Échec de connexion", errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ MODIFICATION ICI : Navigation active vers l'écran d'inscription
+  const goToSignUp = () => {
+      navigation.navigate('SignUpScreen'); 
   };
 
   return (
@@ -31,13 +66,11 @@ const LoginScreen = ({ navigation }) => {
       style={styles.container}
     >
       <View style={styles.inner}>
-        {/* Logo ou Titre */}
         <View style={styles.header}>
             <Text style={styles.logoText}>Khedma.ma 🇲🇦</Text>
             <Text style={styles.subtitle}>Votre expert à domicile</Text>
         </View>
 
-        {/* Formulaire */}
         <View style={styles.form}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -55,14 +88,22 @@ const LoginScreen = ({ navigation }) => {
                 placeholder="******"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={true} // Cache le mot de passe
+                secureTextEntry={true} 
             />
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={styles.loginButtonText}>Se connecter</Text>
+            <TouchableOpacity 
+                style={[styles.loginButton, loading && {opacity: 0.7}]} 
+                onPress={handleLogin}
+                disabled={loading}
+            >
+                {loading ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <Text style={styles.loginButtonText}>Se connecter</Text>
+                )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => alert("À faire : Écran Inscription")}>
+            <TouchableOpacity onPress={goToSignUp}>
                 <Text style={styles.linkText}>Pas encore de compte ? Créer un compte</Text>
             </TouchableOpacity>
         </View>
