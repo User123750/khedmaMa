@@ -14,8 +14,11 @@ const SettingsScreen = ({ navigation }) => {
         { 
           text: "Oui, déconnexion", 
           style: "destructive",
-          // On renvoie vers l'écran de Login et on vide l'historique de navigation
-          onPress: () => navigation.replace('Login') 
+          // On vide la navigation pour qu'on ne puisse pas faire "Retour" après la déconnexion
+          onPress: () => navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          })
         }
       ]
     );
@@ -36,25 +39,43 @@ const SettingsScreen = ({ navigation }) => {
       {/* Menu Options */}
       <View style={styles.menu}>
         
-        <TouchableOpacity style={styles.menuItem}>
+        {/* Modifier mon profil */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('EditProfile')} 
+        >
           <MaterialCommunityIcons name="account-edit-outline" size={24} color="#555" />
           <Text style={styles.menuText}>Modifier mon profil</Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        {/* --- CORRECTION ICI --- */}
+        {/* J'ai déplacé le onPress sur le TouchableOpacity */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('PaymentMethods')}
+        >
           <MaterialCommunityIcons name="credit-card-outline" size={24} color="#555" />
           <Text style={styles.menuText}>Moyens de paiement</Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
+        {/* ---------------------- */}
 
-        <TouchableOpacity style={styles.menuItem}>
+        {/* Notifications */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('Notifications')} // <--- Lien ajouté
+        >
           <MaterialCommunityIcons name="bell-outline" size={24} color="#555" />
           <Text style={styles.menuText}>Notifications</Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        {/* Aide et Support */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('Support')} // <--- Lien ajouté
+        >
           <MaterialCommunityIcons name="help-circle-outline" size={24} color="#555" />
           <Text style={styles.menuText}>Aide et Support</Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
