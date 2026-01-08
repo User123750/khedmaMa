@@ -6,14 +6,12 @@ import {
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
-  Dimensions,
-  Image 
+  Dimensions 
 } from 'react-native';
 
-// Importation des icônes (inclus dans Expo)
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// 1. Nos données (Simulées pour l'instant)
+// Données statiques
 const SERVICES = [
   { id: '1', title: 'Plombier', icon: 'pipe-wrench', color: '#e3f2fd', iconColor: '#2196f3' },
   { id: '2', title: 'Électricien', icon: 'lightning-bolt', color: '#fff3e0', iconColor: '#ff9800' },
@@ -23,17 +21,21 @@ const SERVICES = [
   { id: '6', title: 'Déménagement', icon: 'truck-delivery', color: '#eceff1', iconColor: '#607d8b' },
 ];
 
-// On récupère la largeur de l'écran pour calculer la taille des cases
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = width / 2 - 25; // 2 colonnes avec un peu de marge
+const COLUMN_WIDTH = width / 2 - 25; 
 
-const HomeScreen = ({ navigation }) => {
+// ✅ 1. On ajoute 'route' pour récupérer les paramètres
+const HomeScreen = ({ navigation, route }) => {
 
-  // 2. Fonction pour dessiner CHAQUE carte de service
+  // ✅ 2. On récupère l'info "user" envoyée par App.js / Login
+  // Si l'info est vide, on affiche "Invité" par défaut
+  const user = route.params?.user || { nom: 'Invité' };
+
   const renderServiceItem = ({ item }) => (
     <TouchableOpacity 
       style={[styles.card, { backgroundColor: item.color }]}
-      onPress={() => navigation.navigate('Details', { serviceName: item.title })}
+      // On passe aussi l'user à l'écran suivant pour la réservation
+      onPress={() => navigation.navigate('Details', { serviceName: item.title, currentUser: user })}
     >
       <View style={[styles.iconContainer, { backgroundColor: 'rgba(255,255,255,0.8)' }]}>
         <MaterialCommunityIcons name={item.icon} size={32} color={item.iconColor} />
@@ -44,18 +46,17 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* En-tête simple */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Bonjour, Rehab 👋</Text>
+        {/* ✅ 3. C'est ici que ça devient dynamique */}
+        <Text style={styles.greeting}>Bonjour, {user.nom} 👋</Text>
         <Text style={styles.subtitle}>De quel service avez-vous besoin ?</Text>
       </View>
 
-      {/* 3. La Grille */}
       <FlatList
         data={SERVICES}
         renderItem={renderServiceItem}
         keyExtractor={item => item.id}
-        numColumns={2} // Affiche en 2 colonnes
+        numColumns={2} 
         contentContainerStyle={styles.listContainer}
         columnWrapperStyle={styles.columnWrapper}
         showsVerticalScrollIndicator={false}
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 20,
+    paddingTop: 50,
   },
   header: {
     paddingHorizontal: 20,
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   columnWrapper: {
-    justifyContent: 'space-between', // Espace égal entre les colonnes
+    justifyContent: 'space-between',
   },
   card: {
     width: COLUMN_WIDTH,
@@ -99,12 +100,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    // Ombres douces (Shadows)
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 3,

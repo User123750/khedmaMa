@@ -1,126 +1,116 @@
 // src/screens/DetailsScreen.js
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import React, { useEffect, useState } from 'react';
+import { 
+  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image 
+} from 'react-native';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { runCypher } from '../services/neo4jService';
 
-// Données fictives
-const FAKE_PROS = [
-  { id: 1, name: 'Ahmed B.', job: 'Plombier', rating: 4.8, latitude: 33.5731, longitude: -7.5898 },
-  { id: 2, name: 'Karim S.', job: 'Plombier', rating: 4.5, latitude: 33.5800, longitude: -7.5900 },
-  { id: 3, name: 'Socio Elec', job: 'Électricien', rating: 3.9, latitude: 33.5650, longitude: -7.6000 },
-];
-
-// CORRECTION 1 : Ajout de "navigation" ici (Indispensable !)
 const DetailsScreen = ({ route, navigation }) => {
+  // On récupère le métier choisi ET l'utilisateur connecté
+  const { serviceName, currentUser } = route.params;
   
-  const { serviceName } = route.params; 
-  const prosToDisplay = FAKE_PROS.filter(p => p.job === serviceName || serviceName === 'Plombier');
+  const [prestataires, setPrestataires] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- RÉCUPÉRATION DES DONNÉES NEO4J ---
+  useEffect(() => {
+    const fetchPros = async () => {
+      try {
+        // On cherche les prestataires qui font ce métier
+        const query = `
+          MATCH (p:Prestataire)
+          WHERE p.metier = $metier
+          RETURN p
+        `;
+        const params = { metier: serviceName };
+        const records = await runCypher(query, params);
+
+        // On nettoie les données pour les rendre utilisables
+        const pros = records.map(record => record.get('p').properties);
+        setPrestataires(pros);
+      } catch (error) {
+        console.error("Erreur Neo4j:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPros();
+  }, [serviceName]);
+
+  const renderProCard = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.card}
+      onPress={() => navigation.navigate('ProProfile', { proData: item, currentUser: currentUser })}
+    >
+      {/* Avatar (Image par défaut si pas d'image) */}
+      <View style={styles.avatarContainer}>
+         <Image 
+            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+            style={styles.avatar} 
+         />
+      </View>
+      
+      <View style={styles.infoContainer}>
+        <Text style={styles.name}>{item.nom}</Text>
+        <Text style={styles.job}>{item.metier}</Text>
+        <Text style={styles.price}>{item.tarifHoraire ? `${item.tarifHoraire} DH/h` : 'Prix sur devis'}</Text>
+        
+        <View style={styles.ratingRow}>
+           <Ionicons name="star" size={16} color="#FFD700" />
+           <Text style={styles.rating}>{item.noteMoyenne || "Nouveau"}</Text>
+        </View>
+      </View>
+
+      <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 33.5731,
-          longitude: -7.5898,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
-        {prosToDisplay.map((pro) => (
-          <Marker
-            key={pro.id}
-            coordinate={{ latitude: pro.latitude, longitude: pro.longitude }}
-            title={pro.name}
-            pinColor={serviceName === 'Plombier' ? 'blue' : 'red'}
-          >
-            {/* CORRECTION 2 : L'action onPress est SUR le Callout directement */}
-            <Callout 
-                tooltip
-                onPress={() => navigation.navigate('ProProfile', { proData: pro })}
-            >
-                <View style={styles.calloutContainer}>
-                    <View style={styles.calloutView}>
-                        <Text style={styles.calloutTitle}>{pro.name}</Text>
-                        <Text>{pro.job}</Text>
-                        <Text style={styles.rating}>⭐ {pro.rating}</Text>
-                        <Text style={styles.btnText}>Voir le profil &gt;</Text>
-                    </View>
-                </View>
-            </Callout>
-          </Marker>
-        ))}
-      </MapView>
+      <Text style={styles.headerTitle}>Nos {serviceName}s disponibles</Text>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Recherche : {serviceName}</Text>
-        <Text style={styles.footerSub}>{prosToDisplay.length} professionnels trouvés</Text>
-      </View>
-
+      {loading ? (
+        <ActivityIndicator size="large" color="#2196f3" style={{marginTop: 50}} />
+      ) : (
+        <FlatList
+          data={prestataires}
+          renderItem={renderProCard}
+          keyExtractor={(item) => item.id} // ID unique Firebase/Neo4j
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="account-search" size={50} color="#ccc" />
+                <Text style={styles.emptyText}>Aucun prestataire trouvé pour le moment.</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: { flex: 1, backgroundColor: '#f8f9fa', paddingTop: 20 },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 20, marginBottom: 15, color: '#333' },
+  listContent: { paddingHorizontal: 20 },
+  card: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    padding: 15, borderRadius: 15, marginBottom: 12,
+    // Ombre douce
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
   },
-  map: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-  },
-  // Style important pour que la bulle soit blanche et jolie
-  calloutContainer: {
-    backgroundColor: 'white',
-    borderRadius: 6,
-    padding: 10,
-    width: 150,
-    borderWidth: 1,
-    borderColor: '#eee',
-    // Petit hack pour l'ombre sur iOS/Android à l'intérieur de la map
-    marginBottom: 5, 
-  },
-  calloutView: {
-    alignItems: 'center',
-  },
-  calloutTitle: {
-    fontWeight: 'bold',
-    marginBottom: 5,
-    fontSize: 16,
-  },
-  rating: {
-    color: '#f1c40f',
-    marginTop: 2,
-    fontWeight: 'bold',
-  },
-  btnText: {
-    color: '#2196f3', // Bleu
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-  },
-  footerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  footerSub: {
-    color: 'gray',
-  }
+  avatarContainer: { marginRight: 15 },
+  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#eee' },
+  infoContainer: { flex: 1 },
+  name: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  job: { fontSize: 14, color: 'gray', marginBottom: 2 },
+  price: { fontSize: 14, color: '#2196f3', fontWeight: '600' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  rating: { fontSize: 12, color: '#555', marginLeft: 4, fontWeight: 'bold' },
+  emptyContainer: { alignItems: 'center', marginTop: 50 },
+  emptyText: { color: 'gray', marginTop: 10, fontSize: 16 }
 });
 
 export default DetailsScreen;

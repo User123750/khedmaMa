@@ -2,41 +2,32 @@
 
 // Si tu utilises Neo4j Aura (Cloud), l'URL ressemble à ça (port 7473 pour HTTPS, ou 7474 pour HTTP local)
 // Remplace par tes infos Neo4j
-const NEO4J_URL = 'http://192.168.11.104:7474/db/neo4j/tx/commit';
+
+// src/services/neo4jService.js
+import neo4j from 'neo4j-driver';
+
+// ⚠️ Assure-toi que c'est bien ton IP locale ici
+const NEO4J_URL = 'bolt://192.168.11.104:7687';
 const NEO4J_USER = 'neo4j';
-const NEO4J_PASSWORD = '12345678';
+const NEO4J_PASSWORD = '12345678'; 
 
-// Fonction générique pour exécuter une requête Cypher
-export const runCypher = async (cypherQuery, params = {}) => {
-  try {
-    const response = await fetch(NEO4J_URL, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json;charset=UTF-8',
-        'Content-Type': 'application/json',
-        // Authentification Basic (encodage base64)
-        'Authorization': 'Basic ' + btoa(`${NEO4J_USER}:${NEO4J_PASSWORD}`) 
-      },
-      body: JSON.stringify({
-        statements: [
-          {
-            statement: cypherQuery,
-            parameters: params
-          }
-        ]
-      })
-    });
+const driver = neo4j.driver(
+    NEO4J_URL, 
+    neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD)
+);
 
-    const json = await response.json();
-    
-    if (json.errors && json.errors.length > 0) {
-      console.error("Erreur Neo4j:", json.errors);
-      throw new Error(json.errors[0].message);
+// 👇 C'EST CETTE PARTIE QUI MANQUE SÛREMENT 👇
+export const runCypher = async (query, params = {}) => {
+    const session = driver.session();
+    try {
+        const result = await session.run(query, params);
+        return result.records;
+    } catch (error) {
+        console.error("Erreur Cypher:", error);
+        throw error;
+    } finally {
+        await session.close();
     }
-
-    return json.results[0].data; // Retourne les données brutes
-  } catch (error) {
-    console.error("Erreur connexion Neo4j:", error);
-    throw error;
-  }
 };
+
+export default driver;;

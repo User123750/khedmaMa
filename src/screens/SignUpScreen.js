@@ -9,28 +9,41 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase'; 
 import { runCypher } from '../services/neo4jService';
 
-const SignUpScreen = ({ navigation }) => {
-  // --- État pour le Rôle (Client par défaut) ---
-  const [role, setRole] = useState('CLIENT'); // ou 'PRESTATAIRE'
+// 2. Import du menu déroulant (N'oublie pas l'installation !)
+import { Picker } from '@react-native-picker/picker';
 
-  // --- Champs Communs (Classe Utilisateur) ---
+// --- LISTE DES MÉTIERS DISPONIBLES ---
+const LISTE_METIERS = [
+  "Plombier",
+  "Électricien",
+  "Déménageur",
+  "Peintre",
+  "Jardinier",
+  "Ménage",
+];
+
+const SignUpScreen = ({ navigation }) => {
+  // --- État pour le Rôle ---
+  const [role, setRole] = useState('CLIENT'); 
+
+  // --- Champs Communs ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nom, setNom] = useState('');
   const [telephone, setTelephone] = useState('');
 
-  // --- Champ Spécifique Client ---
+  // --- Champ Client ---
   const [adresse, setAdresse] = useState('');
 
-  // --- Champs Spécifiques Prestataire ---
+  // --- Champs Prestataire ---
   const [cin, setCin] = useState('');
-  const [metier, setMetier] = useState('');
+  // On initialise avec le premier métier de la liste par défaut
+  const [metier, setMetier] = useState(LISTE_METIERS[0]); 
   const [tarif, setTarif] = useState('');
 
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    // Validation basique
     if (!email || !password || !nom || !telephone) {
       Alert.alert("Erreur", "Veuillez remplir les champs obligatoires.");
       return;
@@ -39,12 +52,12 @@ const SignUpScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // ÉTAPE 1 : Création Auth Firebase
+      // ÉTAPE 1 : Auth Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       const uid = user.uid;
 
-      // ÉTAPE 2 : Préparation de la requête Neo4j selon le rôle
+      // ÉTAPE 2 : Requête Neo4j
       let cypherQuery = '';
       let params = {
         id: uid,
@@ -55,8 +68,6 @@ const SignUpScreen = ({ navigation }) => {
       };
 
       if (role === 'CLIENT') {
-        // Création d'un nœud Client (Hérite de Utilisateur)
-        // Note: On ajoute les deux labels :Utilisateur et :Client
         cypherQuery = `
           CREATE (u:Utilisateur:Client {
             id: $id,
@@ -69,8 +80,6 @@ const SignUpScreen = ({ navigation }) => {
         `;
         params.adresse = adresse;
       } else {
-        // Création d'un nœud Prestataire
-        // On initialise noteMoyenne à 0 et estDisponible à true par défaut
         cypherQuery = `
           CREATE (u:Utilisateur:Prestataire {
             id: $id,
@@ -86,15 +95,16 @@ const SignUpScreen = ({ navigation }) => {
           }) RETURN u
         `;
         params.cin = cin;
-        params.metier = metier;
-        params.tarif = parseFloat(tarif); // Important : convertir en nombre
+        params.metier = metier; // Utilise la valeur du Picker
+        params.tarif = parseFloat(tarif);
       }
 
-      // ÉTAPE 3 : Exécution Neo4j
+      // ÉTAPE 3 : Exécution
       await runCypher(cypherQuery, params);
 
       Alert.alert("Succès", "Compte créé avec succès !", [
-        { text: "OK", onPress: () => navigation.replace('HomeScreen') }
+        // J'ai mis 'HomeApp' car c'est le nom qu'on a défini ensemble avant
+        { text: "OK", onPress: () => navigation.replace('HomeApp') } 
       ]);
 
     } catch (error) {
@@ -143,7 +153,21 @@ const SignUpScreen = ({ navigation }) => {
           <View>
             <Text style={styles.sectionTitle}>Infos Professionnelles</Text>
             <TextInput placeholder="N° CIN" value={cin} onChangeText={setCin} style={styles.input} />
-            <TextInput placeholder="Métier (ex: Plombier)" value={metier} onChangeText={setMetier} style={styles.input} />
+            
+            {/* 👇 ICI : LE SELECTEUR DE MÉTIER 👇 */}
+            <Text style={styles.label}>Sélectionnez votre métier :</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={metier}
+                onValueChange={(itemValue) => setMetier(itemValue)}
+                style={styles.picker}
+              >
+                {LISTE_METIERS.map((m, index) => (
+                  <Picker.Item key={index} label={m} value={m} />
+                ))}
+              </Picker>
+            </View>
+
             <TextInput placeholder="Tarif Horaire (DH)" value={tarif} onChangeText={setTarif} keyboardType="numeric" style={styles.input} />
           </View>
         )}
@@ -166,7 +190,8 @@ const styles = StyleSheet.create({
   scrollContainer: { padding: 20, paddingTop: 50 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#2196f3', marginBottom: 20, textAlign: 'center' },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#555', marginTop: 10, marginBottom: 10 },
-  
+  label: { fontSize: 14, color: '#666', marginBottom: 5, marginLeft: 5 },
+
   // Style du Switcher
   roleContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: '#f0f0f0', borderRadius: 10, padding: 4 },
   roleButton: { flex: 1, padding: 12, alignItems: 'center', borderRadius: 8 },
@@ -175,6 +200,25 @@ const styles = StyleSheet.create({
   roleTextActive: { color: '#fff' },
 
   input: { backgroundColor: '#f5f5f5', padding: 15, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#e0e0e0' },
+  
+  // NOUVEAU : Style pour le Picker (Menu déroulant)
+  pickerContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 15,
+    // Sur Android le picker a besoin d'une hauteur définie parfois, sur iOS il est différent
+    ...Platform.select({
+        ios: { height: 150, justifyContent: 'center' },
+        android: { height: 55, justifyContent: 'center' }
+    })
+  },
+  picker: {
+    width: '100%',
+    height: '100%',
+  },
+
   button: { backgroundColor: '#2196f3', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   linkText: { color: '#2196f3', textAlign: 'center' }
