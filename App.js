@@ -1,183 +1,160 @@
 // App.js
 import React from 'react';
-import { View, Platform } from 'react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
 
-// --- IMPORT DES ÉCRANS ---
-import LoginScreen from './src/screens/LoginScreen';
-import SignUpScreen from './src/screens/SignUpScreen'; // Nouveau de ton collègue
+
+// Import de la stack d'authentification utilisateur
+import UserStack from './src/navigation/UserStack';
+import FreelancerStack from './src/navigation/FreelancerStack';
+
+import AdminStack from './src/navigation/AdminStack';
+import AdminLoginScreen from './src/features/admin-auth/auth-screens/AdminLoginScreen';
+import AdminDashboard from './src/screens/AdminDashboard';
+
+
+
+
+// Import des écrans principaux
 import HomeScreen from './src/screens/HomeScreen';
 import DetailsScreen from './src/screens/DetailsScreen';
 import ProProfileScreen from './src/screens/ProProfileScreen';
 import BookingScreen from './src/screens/bookingScreen';
-import ActivityScreen from './src/screens/ActivityScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-import PaymentScreen from './src/screens/PaymentScreen';
-import EditProfileScreen from './src/screens/EditProfileScreen';
-import NotificationsScreen from './src/screens/NotificationsScreen';
-import SupportScreen from './src/screens/SupportScreen';
-
+import ActivityScreen from './src/screens/ActivityScreen'; 
+import ProfileScreen from './src/features/user-auth/auth-screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// 1. COULEURS & THEME
-const COLORS = {
-  primary: '#2196f3',
-  secondary: '#FF6584',
-  background: '#f8f9fa',
-  text: '#333333',
-  white: '#ffffff',
-  tabBar: '#ffffff',
-};
-
-const MyTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: COLORS.background,
-  },
-};
-
-// 2. CONFIGURATION DES ONGLETS (Tabs)
 function HomeTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: 'gray',
-        tabBarShowLabel: false,
-        
-        // Style de la barre "Flottante"
-        tabBarStyle: {
-          position: 'absolute',
-          bottom: 25,
-          left: 20,
-          right: 20,
-          elevation: 5,
-          backgroundColor: COLORS.tabBar,
-          borderRadius: 15,
-          height: 70,
-          ...Platform.select({
-            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 10 },
-          }),
-        },
-
-        // Logique des icônes
-        tabBarIcon: ({ color, size, focused }) => {
+        headerShown: false, 
+        tabBarActiveTintColor: '#2196f3', 
+        tabBarInactiveTintColor: 'gray', 
+        tabBarStyle: { paddingBottom: 5, height: 60 },
+      
+        tabBarIcon: ({ color, size }) => {
           let iconName;
+          if (route.name === 'Accueil') iconName = 'home';
+          else if (route.name === 'Activité') iconName = 'file-document-outline';
           
-          if (route.name === 'Accueil') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Activité') {
-            iconName = focused ? 'file-document' : 'file-document-outline';
-          } else if (route.name === 'Profil') {
-            iconName = focused ? 'account-cog' : 'account-cog-outline';
-          }
-
-          return (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: 0 }}>
-              <MaterialCommunityIcons name={iconName} size={30} color={color} />
-            </View>
-          );
+          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
         },
       })}
     >
       <Tab.Screen name="Accueil" component={HomeScreen} />
       <Tab.Screen name="Activité" component={ActivityScreen} />
-      <Tab.Screen name="Profil" component={SettingsScreen} />
+      <Tab.Screen name="Profil" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
-// 3. NAVIGATION PRINCIPALE
+
+function RootNavigator() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Auth"
+          component={UserStack}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="FreelancerAuth"
+          component={FreelancerStack}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AdminLogin"
+          component={AdminLoginScreen}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
+    );
+  }
+
+if (user.role === 'admin') {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="AdminDashboard"
+        component={() => (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>Page Dashboard Admin (test)</Text>
+          </View>
+        )}
+      />
+    </Stack.Navigator>
+  );
+}
+
+  if (user.role === 'freelancer') {
+    return (
+      <Stack.Navigator>
+        <Stack.Screen
+          name="HomeApp"
+          component={HomeTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Details"
+          component={DetailsScreen}
+          options={{ title: 'Recherche' }}
+        />
+        <Stack.Screen
+          name="ProProfile"
+          component={ProProfileScreen}
+          options={({ route }) => ({ title: route.params.proData.name })}
+        />
+        <Stack.Screen
+          name="Booking"
+          component={BookingScreen}
+          options={{ title: 'Demande' }}
+        />
+      </Stack.Navigator>
+    );
+  }
+  // Par défaut, user simple
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="HomeApp"
+        component={HomeTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Details"
+        component={DetailsScreen}
+        options={{ title: 'Recherche' }}
+      />
+      <Stack.Screen
+        name="ProProfile"
+        component={ProProfileScreen}
+        options={({ route }) => ({ title: route.params.proData.name })}
+      />
+      <Stack.Screen
+        name="Booking"
+        component={BookingScreen}
+        options={{ title: 'Demande' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
-    <NavigationContainer theme={MyTheme}>
-      <StatusBar style="auto" /> 
-      
-      <Stack.Navigator 
-        initialRouteName="LoginScreen"
-        screenOptions={{
-          // Options par défaut pour tous les écrans du Stack
-          headerStyle: { backgroundColor: COLORS.primary },
-          headerTintColor: COLORS.white,
-          headerTitleStyle: { fontWeight: 'bold' },
-          headerBackTitleVisible: false, // Cache le texte "Retour" sur iOS
-          animation: 'slide_from_right', // Animation fluide
-        }}
-      >
-        
-        {/* --- AUTHENTIFICATION --- */}
-        <Stack.Screen 
-          name="LoginScreen" 
-          component={LoginScreen} 
-          options={{ headerShown: false }} 
-        />
-
-        <Stack.Screen 
-          name="SignUpScreen" 
-          component={SignUpScreen} 
-          options={{ headerShown: false }} 
-        />
-
-        {/* --- APP PRINCIPALE (TABS) --- */}
-        <Stack.Screen 
-          name="HomeApp" 
-          component={HomeTabs} 
-          options={{ headerShown: false }} 
-        />
-
-        {/* --- ÉCRANS SECONDAIRES --- */}
-        <Stack.Screen 
-          name="Details" 
-          component={DetailsScreen} 
-          options={{ title: 'Recherche détaillée' }} 
-        />
-        
-        <Stack.Screen 
-          name="ProProfile" 
-          component={ProProfileScreen} 
-          options={({ route }) => ({ 
-            title: route.params?.proData?.name || 'Profil Pro',
-          })} 
-        />
-        
-        <Stack.Screen 
-          name="Booking" 
-          component={BookingScreen} 
-          options={{ title: 'Réservation' }} 
-        />
-
-        <Stack.Screen 
-          name="EditProfile" 
-          component={EditProfileScreen} 
-          options={{ title: 'Modifier mon profil' }} 
-        />
-
-        <Stack.Screen 
-          name="PaymentMethods" 
-          component={PaymentScreen} 
-          options={{ title: 'Moyens de paiement' }} 
-        />
-
-        <Stack.Screen 
-          name="Notifications" 
-          component={NotificationsScreen} 
-          options={{ title: 'Notifications' }} 
-        />
-
-        <Stack.Screen 
-          name="Support" 
-          component={SupportScreen} 
-          options={{ title: 'Aide & Support' }} 
-        />
-
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
