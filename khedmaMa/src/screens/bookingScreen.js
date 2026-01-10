@@ -23,7 +23,7 @@ const BookingScreen = ({ route, navigation }) => {
   }
   
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(''); // Tu pourras mettre un DatePicker plus tard
+  const [date, setDate] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleConfirmOrder = async () => {
@@ -35,8 +35,37 @@ const BookingScreen = ({ route, navigation }) => {
     setLoading(true);
 
     try {
-        // --- REQUÊTE CYPHER ---
-        // On crée une relation :RESERVE entre le Client et le Prestataire
+        // 🛑 ÉTAPE 1 : VÉRIFICATION DE LA CARTE BANCAIRE
+        // On vérifie si le client a la propriété 'hasPaymentMethod' à true
+        const checkCardQuery = `
+            MATCH (c:Client {id: $clientId})
+            RETURN c.hasPaymentMethod AS hasCard
+        `;
+        
+        const checkResult = await runCypher(checkCardQuery, { clientId: currentUser.id });
+        
+        // On récupère la valeur (false par défaut si non trouvé)
+        const hasCard = checkResult.length > 0 ? checkResult[0].get('hasCard') : false;
+
+        // Si pas de carte, on bloque et on redirige
+        if (!hasCard) {
+            setLoading(false);
+            Alert.alert(
+                "Paiement requis 💳",
+                "Vous devez ajouter une carte bancaire pour pouvoir réserver un prestataire.",
+                [
+                    { text: "Annuler", style: "cancel" },
+                    { 
+                        text: "Ajouter une carte", 
+                        // On redirige vers l'écran PaymentMethods défini dans ton App.js
+                        onPress: () => navigation.navigate('PaymentMethods', { currentUser: currentUser }) 
+                    }
+                ]
+            );
+            return; // On arrête la fonction ici
+        }
+
+        // ✅ ÉTAPE 2 : CRÉATION DE LA RÉSERVATION (Si carte OK)
         const query = `
             MATCH (c:Client {id: $clientId})
             MATCH (p:Prestataire {id: $proId})
@@ -66,7 +95,7 @@ const BookingScreen = ({ route, navigation }) => {
 
     } catch (error) {
         console.error("Erreur réservation:", error);
-        Alert.alert("Erreur", "Impossible d'envoyer la demande. Vérifiez votre connexion.");
+        Alert.alert("Erreur", "Impossible de vérifier votre compte ou d'envoyer la demande.");
     } finally {
         setLoading(false);
     }

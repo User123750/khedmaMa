@@ -7,56 +7,67 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { runCypher } from '../services/neo4jService';
 
 const DetailsScreen = ({ route, navigation }) => {
-  // On récupère le métier choisi (ex: "Plombier") ET l'utilisateur connecté (Client)
   const { serviceName, currentUser } = route.params;
   
   const [prestataires, setPrestataires] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- RÉCUPÉRATION DES DONNÉES NEO4J ---
+  // Fonction pour nettoyer les données Neo4j (comme vu précédemment)
+  const serializeNeo4jData = (properties) => {
+    const cleaned = {};
+    Object.keys(properties).forEach((key) => {
+      const value = properties[key];
+      if (value && typeof value === 'object') {
+        if (value.toNumber) cleaned[key] = value.toNumber();
+        else if (value.toString) cleaned[key] = value.toString();
+        else cleaned[key] = value;
+      } else {
+        cleaned[key] = value;
+      }
+    });
+    return cleaned;
+  };
+
   useEffect(() => {
     const fetchPros = async () => {
       setLoading(true);
       try {
-        // ✅ REQUÊTE OPTIMISÉE :
-        // 1. On cherche les noeuds qui sont À LA FOIS 'Utilisateur' et 'Prestataire'
-        // 2. On filtre par métier exact
-        // 3. On ne prend que ceux qui sont disponibles
         const query = `
           MATCH (p:Utilisateur:Prestataire)
           WHERE p.metier = $metier AND p.estDisponible = true
           RETURN p
         `;
-        
         const params = { metier: serviceName };
         const records = await runCypher(query, params);
-
-        // On extrait les propriétés de chaque noeud trouvé
-        const pros = records.map(record => record.get('p').properties);
+        const pros = records.map(record => {
+            const node = record.get('p');
+            const cleanProps = serializeNeo4jData(node.properties);
+            return { ...cleanProps, id: cleanProps.id || Math.random().toString() }; 
+        });
         setPrestataires(pros);
-
       } catch (error) {
         console.error("Erreur Neo4j:", error);
-        Alert.alert("Erreur", "Impossible de charger les prestataires. Vérifiez votre connexion.");
+        Alert.alert("Erreur", "Impossible de charger les prestataires.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchPros();
   }, [serviceName]);
 
   const renderProCard = ({ item }) => (
     <TouchableOpacity 
       style={styles.card}
-      // On envoie les infos du pro ET du client vers le profil du pro pour réserver
-      onPress={() => navigation.navigate('ProProfile', { proData: item, currentUser: currentUser })}
+      onPress={() => navigation.navigate('Booking', { proData: item, currentUser: currentUser })}
     >
-      {/* Avatar (Image par défaut si pas d'image) */}
       <View style={styles.avatarContainer}>
+         {/* ✅ CORRECTION ICI POUR L'IMAGE */}
          <Image 
-            // Si le pro a une photo, on l'affiche, sinon image générique
-            source={item.photo ? { uri: item.photo } : { uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+            source={
+              item.photo 
+                ? { uri: item.photo } // Si une photo existe, on l'utilise
+                : { uri: `https://ui-avatars.com/api/?name=${item.nom}&background=E3F2FD&color=2196f3&bold=true` } // Sinon, on génère un avatar avec son nom
+            }
             style={styles.avatar} 
          />
       </View>
@@ -68,7 +79,6 @@ const DetailsScreen = ({ route, navigation }) => {
         
         <View style={styles.ratingRow}>
            <Ionicons name="star" size={16} color="#FFD700" />
-           {/* On gère le cas où la note est null ou 0 */}
            <Text style={styles.rating}>
              {item.noteMoyenne && item.noteMoyenne > 0 ? item.noteMoyenne : "Nouveau"}
            </Text>
@@ -89,13 +99,13 @@ const DetailsScreen = ({ route, navigation }) => {
         <FlatList
           data={prestataires}
           renderItem={renderProCard}
-          keyExtractor={(item) => item.id} // ID unique venant de Firebase/Neo4j
+          keyExtractor={(item) => item.id.toString()} 
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="account-search" size={60} color="#e0e0e0" />
                 <Text style={styles.emptyTitle}>Oups !</Text>
-                <Text style={styles.emptyText}>Aucun {serviceName} disponible pour le moment.</Text>
+                <Text style={styles.emptyText}>Aucun {serviceName} disponible.</Text>
             </View>
           }
         />
@@ -111,19 +121,17 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
     padding: 15, borderRadius: 16, marginBottom: 15,
-    // Ombre plus esthétique
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3
   },
   avatarContainer: { marginRight: 15 },
-  avatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#f0f2f5' },
+  // J'ai enlevé le backgroundColor ici car il est géré par l'API ui-avatars
+  avatar: { width: 60, height: 60, borderRadius: 30 }, 
   infoContainer: { flex: 1 },
   name: { fontSize: 17, fontWeight: '700', color: '#2c3e50', marginBottom: 2 },
   job: { fontSize: 13, color: '#7f8c8d', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   price: { fontSize: 15, color: '#2196f3', fontWeight: '700' },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: '#fff9c4', alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   rating: { fontSize: 12, color: '#fbc02d', marginLeft: 4, fontWeight: 'bold' },
-  
-  // Styles pour l'état vide
   emptyContainer: { alignItems: 'center', marginTop: 80 },
   emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#95a5a6', marginTop: 10 },
   emptyText: { color: '#95a5a6', marginTop: 5, fontSize: 14 }

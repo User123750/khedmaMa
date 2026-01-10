@@ -26,7 +26,7 @@ const COLORS = {
 };
 
 export default function PaymentScreen({ route, navigation }) {
-  const user = route.params?.user;
+  const user = route.params?.user || route.params?.currentUser;
 
   const [cashEnabled, setCashEnabled] = useState(true);
   const [cards, setCards] = useState([]);
@@ -86,7 +86,7 @@ export default function PaymentScreen({ route, navigation }) {
     } catch (e) { console.error(e); }
   };
 
-  // --- 3. SAUVEGARDER LA CARTE (CORRIGÉ) ---
+  // --- 3. SAUVEGARDER LA CARTE (CORRIGÉ ✅) ---
   const handleSaveCard = async () => {
     if (!user) {
         Alert.alert("Erreur", "Utilisateur non identifié.");
@@ -106,8 +106,6 @@ export default function PaymentScreen({ route, navigation }) {
     if (newCard.number.startsWith('5')) detectedBrand = 'mastercard';
 
     const last4Digits = newCard.number.slice(-4);
-    
-    // ✅ GÉNÉRATION AUTOMATIQUE DE L'ID (Aléatoire)
     const generatedId = Math.random().toString(36).substr(2, 9);
 
     const cardToDisplay = {
@@ -118,6 +116,8 @@ export default function PaymentScreen({ route, navigation }) {
     };
 
     try {
+        // ✅ MISE À JOUR IMPORTANTE ICI :
+        // On ajoute "SET u.hasPaymentMethod = true" pour débloquer la réservation
         const query = `
             MATCH (u:Utilisateur {id: $uid})
             CREATE (c:CarteBancaire {
@@ -127,12 +127,12 @@ export default function PaymentScreen({ route, navigation }) {
                 expiry: $expiry
             })
             CREATE (u)-[:A_MOYEN_PAIEMENT]->(c)
+            SET u.hasPaymentMethod = true 
         `;
         
-        // ✅ CORRECTION DU BUG : On passe bien 'cardId'
         const params = { 
             uid: user.id, 
-            cardId: generatedId, // C'est ici que ça bloquait avant
+            cardId: generatedId,
             brand: detectedBrand,
             last4: last4Digits,
             expiry: newCard.expiry
@@ -143,7 +143,7 @@ export default function PaymentScreen({ route, navigation }) {
         setCards([...cards, cardToDisplay]);
         setModalVisible(false);
         setNewCard({ number: '', expiry: '', cvc: '' }); 
-        Alert.alert("Succès", "Carte ajoutée !");
+        Alert.alert("Succès", "Carte ajoutée ! Vous pouvez maintenant réserver.");
 
     } catch (error) {
         console.error("Erreur sauvegarde carte:", error);
@@ -153,14 +153,30 @@ export default function PaymentScreen({ route, navigation }) {
     }
   };
 
-  // --- 4. SUPPRESSION ---
+  // --- 4. SUPPRESSION (DÉJÀ CORRECT ✅) ---
   const handleDeleteCard = (id) => {
     Alert.alert("Supprimer", "Retirer cette carte ?", [
       { text: "Annuler", style: "cancel" },
       { text: "Supprimer", style: "destructive", onPress: async () => {
-          setCards(cards.filter(c => c.id !== id));
+          const remainingCards = cards.filter(c => c.id !== id);
+          setCards(remainingCards);
+
           if(user) {
-            await runCypher(`MATCH (u:Utilisateur {id: $uid})-[r]->(c:CarteBancaire {id: $cid}) DELETE r, c`, { uid: user.id, cid: id });
+            try {
+              // Cette requête vérifie s'il reste des cartes. Si 0, elle bloque le paiement.
+              const query = `
+                  MATCH (u:Utilisateur {id: $uid})-[r]->(c:CarteBancaire {id: $cid})
+                  DELETE r, c
+                  WITH u
+                  OPTIONAL MATCH (u)-[:A_MOYEN_PAIEMENT]->(other)
+                  WITH u, count(other) as nbCartes
+                  SET u.hasPaymentMethod = (nbCartes > 0)
+              `;
+              await runCypher(query, { uid: user.id, cid: id });
+            } catch (e) {
+              console.error("Erreur suppression:", e);
+              Alert.alert("Erreur", "Problème lors de la suppression");
+            }
           }
       }}
     ]);

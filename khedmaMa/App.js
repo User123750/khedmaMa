@@ -52,7 +52,10 @@ function HomeTabs({ route }) {
       })}
     >
       <Tab.Screen name="Accueil" component={HomeScreen} initialParams={{ user: user }} />
-      <Tab.Screen name="Activité" component={ActivityScreen} />
+      
+      {/* ✅ CORRECTION ICI : On passe l'utilisateur à l'écran Activité */}
+      <Tab.Screen name="Activité" component={ActivityScreen} initialParams={{ user: user }} />
+      
       <Tab.Screen name="Profil" component={SettingsScreen} initialParams={{ user: user }} />
     </Tab.Navigator>
   );
