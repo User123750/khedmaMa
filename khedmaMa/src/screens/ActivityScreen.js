@@ -17,8 +17,6 @@ const ActivityScreen = ({ route, navigation }) => {
 
   // --- 1. FONCTION DE RÉCUPÉRATION DES DONNÉES ---
   const fetchActivities = async () => {
-    // 🛑 CORRECTION DU BUG INFINI :
-    // Si pas de user, on arrête le chargement immédiatement.
     if (!user) {
         console.log("Erreur : Aucun utilisateur détecté dans ActivityScreen");
         setLoading(false);
@@ -27,7 +25,6 @@ const ActivityScreen = ({ route, navigation }) => {
     }
 
     try {
-      // Requete : On part du CLIENT -> vers le PRESTATAIRE
       const query = `
         MATCH (c:Client {id: $clientId})-[r:RESERVE]->(p:Prestataire)
         RETURN p, r
@@ -42,11 +39,11 @@ const ActivityScreen = ({ route, navigation }) => {
         const resa = record.get('r').properties;
         
         return {
-            id: record.get('r').identity.toString(), // ID unique de la réservation
+            id: record.get('r').identity.toString(), 
             proName: pro.nom,
             proJob: pro.metier,
             datePrevue: resa.datePrevue,
-            status: resa.status || 'EN_ATTENTE', // Valeur par défaut si null
+            status: resa.status || 'EN_ATTENTE', 
             description: resa.description,
             price: pro.tarifHoraire ? pro.tarifHoraire + ' DH/h' : 'Sur devis'
         };
@@ -58,7 +55,6 @@ const ActivityScreen = ({ route, navigation }) => {
       console.error("Erreur ActivityScreen:", error);
       Alert.alert("Erreur", "Impossible de charger l'historique");
     } finally {
-      // ✅ Ici on est sûr que ça s'exécute toujours
       setLoading(false);
       setRefreshing(false);
     }
@@ -154,7 +150,7 @@ const ActivityScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', paddingTop: 30 }, // paddingTop remplace SafeAreaView
+  container: { flex: 1, backgroundColor: '#f8f9fa', paddingTop: 30 },
   header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   list: { padding: 15 },

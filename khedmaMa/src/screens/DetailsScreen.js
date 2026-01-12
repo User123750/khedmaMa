@@ -1,59 +1,48 @@
-// src/screens/DetailsScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert 
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { runCypher } from '../services/neo4jService';
+import { useFocusEffect } from '@react-navigation/native';
+
+// Ton IP locale (celle qui fonctionne chez toi)
+const API_URL_BASE = 'http://10.181.182.244:3000/api/providers';
 
 const DetailsScreen = ({ route, navigation }) => {
   const { serviceName, currentUser } = route.params;
   
   const [prestataires, setPrestataires] = useState([]);
   const [loading, setLoading] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-  // Fonction pour nettoyer les données Neo4j (comme vu précédemment)
-  const serializeNeo4jData = (properties) => {
-    const cleaned = {};
-    Object.keys(properties).forEach((key) => {
-      const value = properties[key];
-      if (value && typeof value === 'object') {
-        if (value.toNumber) cleaned[key] = value.toNumber();
-        else if (value.toString) cleaned[key] = value.toString();
-        else cleaned[key] = value;
-      } else {
-        cleaned[key] = value;
-      }
-    });
-    return cleaned;
-  };
+      const fetchPros = async () => {
+        // On affiche le chargement seulement si la liste est vide (pour éviter que ça clignote trop)
+        if(prestataires.length === 0) setLoading(true);
+        
+        try {
+          // On ajoute un timestamp (?t=...) pour empêcher le téléphone de garder l'ancienne réponse en cache
+          const response = await fetch(`${API_URL_BASE}/${serviceName}?t=${new Date().getTime()}`);
+          const data = await response.json();
+          
+          if (isActive) {
+            setPrestataires(data);
+          }
+        } catch (error) {
+          console.error("Erreur Fetch:", error);
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      };
 
-  useEffect(() => {
-    const fetchPros = async () => {
-      setLoading(true);
-      try {
-        const query = `
-          MATCH (p:Utilisateur:Prestataire)
-          WHERE p.metier = $metier AND p.estDisponible = true
-          RETURN p
-        `;
-        const params = { metier: serviceName };
-        const records = await runCypher(query, params);
-        const pros = records.map(record => {
-            const node = record.get('p');
-            const cleanProps = serializeNeo4jData(node.properties);
-            return { ...cleanProps, id: cleanProps.id || Math.random().toString() }; 
-        });
-        setPrestataires(pros);
-      } catch (error) {
-        console.error("Erreur Neo4j:", error);
-        Alert.alert("Erreur", "Impossible de charger les prestataires.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPros();
-  }, [serviceName]);
+      fetchPros();
+
+      return () => {
+        isActive = false;
+      };
+    }, [serviceName]) 
+  );
 
   const renderProCard = ({ item }) => (
     <TouchableOpacity 
@@ -61,12 +50,11 @@ const DetailsScreen = ({ route, navigation }) => {
       onPress={() => navigation.navigate('Booking', { proData: item, currentUser: currentUser })}
     >
       <View style={styles.avatarContainer}>
-         {/* ✅ CORRECTION ICI POUR L'IMAGE */}
          <Image 
             source={
               item.photo 
-                ? { uri: item.photo } // Si une photo existe, on l'utilise
-                : { uri: `https://ui-avatars.com/api/?name=${item.nom}&background=E3F2FD&color=2196f3&bold=true` } // Sinon, on génère un avatar avec son nom
+                ? { uri: item.photo } 
+                : { uri: `https://ui-avatars.com/api/?name=${item.nom}&background=E3F2FD&color=2196f3&bold=true` }
             }
             style={styles.avatar} 
          />
@@ -80,7 +68,8 @@ const DetailsScreen = ({ route, navigation }) => {
         <View style={styles.ratingRow}>
            <Ionicons name="star" size={16} color="#FFD700" />
            <Text style={styles.rating}>
-             {item.noteMoyenne && item.noteMoyenne > 0 ? item.noteMoyenne : "Nouveau"}
+             {/* Affiche le nombre de réservations en direct */}
+             {item.popularity > 0 ? `${item.popularity} réservations` : "Nouveau"}
            </Text>
         </View>
       </View>
@@ -101,6 +90,8 @@ const DetailsScreen = ({ route, navigation }) => {
           renderItem={renderProCard}
           keyExtractor={(item) => item.id.toString()} 
           contentContainerStyle={styles.listContent}
+          refreshing={loading}
+          onRefresh={() => { /* Le useFocusEffect gère déjà, mais ceci active l'animation */ }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
                 <MaterialCommunityIcons name="account-search" size={60} color="#e0e0e0" />
@@ -124,7 +115,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3
   },
   avatarContainer: { marginRight: 15 },
-  // J'ai enlevé le backgroundColor ici car il est géré par l'API ui-avatars
   avatar: { width: 60, height: 60, borderRadius: 30 }, 
   infoContainer: { flex: 1 },
   name: { fontSize: 17, fontWeight: '700', color: '#2c3e50', marginBottom: 2 },

@@ -205,7 +205,6 @@ const ProHomeScreen = ({ route, navigation }) => {
            )}
 
            {isAccepted && (
-             // C'est ici qu'on appelle la modale
              <TouchableOpacity style={[styles.btn, styles.btnFinish]} onPress={() => openFinishModal(item)} disabled={!!actionLoading}>
                  {actionLoading === item.id ? <ActivityIndicator color="#fff"/> : (
                     <View style={{flexDirection:'row', alignItems:'center'}}>
@@ -331,6 +330,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#333' },
   modalSubtitle: { fontSize: 14, color: '#666', marginBottom: 20, textAlign: 'center' },
   inputContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+
   input: { borderBottomWidth: 1, borderBottomColor: '#2196f3', fontSize: 30, width: 80, textAlign: 'center', color: '#333', fontWeight: 'bold' },
   unitText: { fontSize: 18, color: '#666', marginLeft: 10 },
   calcPreview: { width: '100%', backgroundColor: '#f1f8e9', padding: 15, borderRadius: 10, marginBottom: 20, alignItems: 'center' },

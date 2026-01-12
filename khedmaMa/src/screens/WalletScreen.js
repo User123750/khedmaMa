@@ -19,7 +19,7 @@ const WalletScreen = ({ route, navigation }) => {
     setLoading(true);
 
     try {
-      // ✅ CORRECTION ICI : Remplacement de LET par WITH ... AS
+
       const queryStats = `
         MATCH (p:Prestataire {id: $proId})<-[r:RESERVE]-(c:Client)
         

@@ -52,8 +52,7 @@ function HomeTabs({ route }) {
       })}
     >
       <Tab.Screen name="Accueil" component={HomeScreen} initialParams={{ user: user }} />
-      
-      {/* ✅ CORRECTION ICI : On passe l'utilisateur à l'écran Activité */}
+
       <Tab.Screen name="Activité" component={ActivityScreen} initialParams={{ user: user }} />
       
       <Tab.Screen name="Profil" component={SettingsScreen} initialParams={{ user: user }} />
@@ -61,7 +60,7 @@ function HomeTabs({ route }) {
   );
 }
 
-// --- MENU PRESTATAIRE (NOUVEAU) ---
+// --- MENU PRESTATAIRE  ---
 function ProTabs({ route }) {
   const user = route.params?.user; 
   return (

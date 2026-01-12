@@ -5,14 +5,10 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 
-// Import du service Neo4j
-import { runCypher } from '../services/neo4jService';
-
 const BookingScreen = ({ route, navigation }) => {
-  // On récupère les deux acteurs de la réservation
   const { proData, currentUser } = route.params || {};
 
-  // Protection contre le crash si les données manquent
+  // Protection données
   if (!proData || !currentUser) {
       return (
         <View style={styles.center}>
@@ -27,75 +23,53 @@ const BookingScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleConfirmOrder = async () => {
-    if (description.length < 5 || date.length < 3) {
-      Alert.alert("Oups", "Veuillez indiquer une date et décrire le problème.");
+    const cleanDate = date.trim();
+    const cleanDesc = description.trim();
+
+
+    if (cleanDate.length < 2) {
+      Alert.alert("Date manquante", "Veuillez indiquer quand vous souhaitez l'intervention.");
+      return;
+    }
+    if (cleanDesc.length < 5) {
+      Alert.alert("Description trop courte", "Veuillez décrire le problème en quelques mots.");
       return;
     }
 
     setLoading(true);
 
     try {
-        // 🛑 ÉTAPE 1 : VÉRIFICATION DE LA CARTE BANCAIRE
-        // On vérifie si le client a la propriété 'hasPaymentMethod' à true
-        const checkCardQuery = `
-            MATCH (c:Client {id: $clientId})
-            RETURN c.hasPaymentMethod AS hasCard
-        `;
-        
-        const checkResult = await runCypher(checkCardQuery, { clientId: currentUser.id });
-        
-        // On récupère la valeur (false par défaut si non trouvé)
-        const hasCard = checkResult.length > 0 ? checkResult[0].get('hasCard') : false;
+        // A REMPLACEr PAR  IP LOCALE
+        const API_URL = 'http://10.181.182.244:3000/api/book'; 
 
-        // Si pas de carte, on bloque et on redirige
-        if (!hasCard) {
-            setLoading(false);
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                clientId: currentUser.id,
+                proId: proData.id, 
+                date: cleanDate,
+                description: cleanDesc
+            })
+        });
+
+        const json = await response.json();
+
+        if (response.ok) {
             Alert.alert(
-                "Paiement requis 💳",
-                "Vous devez ajouter une carte bancaire pour pouvoir réserver un prestataire.",
-                [
-                    { text: "Annuler", style: "cancel" },
-                    { 
-                        text: "Ajouter une carte", 
-                        // On redirige vers l'écran PaymentMethods défini dans ton App.js
-                        onPress: () => navigation.navigate('PaymentMethods', { currentUser: currentUser }) 
-                    }
-                ]
+                "Succès ! 🎉",
+                "Votre demande a été envoyée au prestataire.",
+                [{ text: "Super", onPress: () => navigation.navigate('HomeApp') }] 
             );
-            return; // On arrête la fonction ici
+        } else {
+            throw new Error(json.error || "Erreur inconnue");
         }
-
-        // ✅ ÉTAPE 2 : CRÉATION DE LA RÉSERVATION (Si carte OK)
-        const query = `
-            MATCH (c:Client {id: $clientId})
-            MATCH (p:Prestataire {id: $proId})
-            CREATE (c)-[r:RESERVE {
-                datePrevue: $date,
-                description: $description,
-                status: 'EN_ATTENTE',
-                dateCreation: datetime()
-            }]->(p)
-            RETURN r
-        `;
-
-        const params = {
-            clientId: currentUser.id,
-            proId: proData.id,
-            date: date,
-            description: description
-        };
-
-        await runCypher(query, params);
-
-        Alert.alert(
-            "Succès ! 🎉",
-            "Votre demande a été envoyée au prestataire.",
-            [{ text: "Super", onPress: () => navigation.navigate('HomeApp') }]
-        );
 
     } catch (error) {
         console.error("Erreur réservation:", error);
-        Alert.alert("Erreur", "Impossible de vérifier votre compte ou d'envoyer la demande.");
+        Alert.alert("Erreur", "Impossible d'envoyer la demande. Vérifiez votre connexion.");
     } finally {
         setLoading(false);
     }
@@ -112,13 +86,14 @@ const BookingScreen = ({ route, navigation }) => {
         <View style={styles.proCard}>
             <Text style={styles.proName}>Avec : {proData.nom}</Text>
             <Text style={styles.proJob}>{proData.metier}</Text>
-            <Text style={styles.proPrice}>{proData.tarifHoraire ? proData.tarifHoraire + ' DH/h' : 'Tarif non défini'}</Text>
+            <Text style={styles.proPrice}>{proData.tarifHoraire ? proData.tarifHoraire + ' DH/h' : 'Tarif sur devis'}</Text>
         </View>
 
         <Text style={styles.label}>Date et Heure souhaitées :</Text>
         <TextInput
             style={styles.input}
-            placeholder="ex: Demain à 14h00"
+            placeholder="ex: Demain à 14h00" 
+            placeholderTextColor="#999"
             value={date}
             onChangeText={setDate}
         />
@@ -127,6 +102,7 @@ const BookingScreen = ({ route, navigation }) => {
         <TextInput
             style={styles.textArea}
             placeholder="Décrivez votre panne en détail..."
+            placeholderTextColor="#999"
             multiline={true}
             numberOfLines={4}
             value={description}
@@ -161,8 +137,8 @@ const styles = StyleSheet.create({
   proJob: { color: '#555', marginTop: 2 },
   proPrice: { color: '#333', fontWeight: 'bold', marginTop: 5 },
   label: { fontSize: 16, fontWeight: '600', marginBottom: 8, color: '#333' },
-  input: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: '#eee' },
-  textArea: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 10, height: 100, borderWidth: 1, borderColor: '#eee', textAlignVertical: 'top' },
+  input: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 10, marginBottom: 20, borderWidth: 1, borderColor: '#eee', color: '#000' },
+  textArea: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 10, height: 100, borderWidth: 1, borderColor: '#eee', textAlignVertical: 'top', color: '#000' },
   footer: { padding: 20, borderTopWidth: 1, borderColor: '#f0f0f0' },
   confirmButton: { backgroundColor: '#2196f3', padding: 15, borderRadius: 15, alignItems: 'center' },
   buttonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }

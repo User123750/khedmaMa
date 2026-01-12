@@ -37,7 +37,7 @@ export default function EditProfileScreen({ navigation }) {
     phone: '',
     address: '',
     metier: '',
-    photo: null // On ajoute le champ photo
+    photo: null
   });
 
   // Charger les données
@@ -58,7 +58,7 @@ export default function EditProfileScreen({ navigation }) {
             phone: data.telephone || '',
             address: data.adresse || '',
             metier: data.metier || '',
-            photo: data.photo || null // On récupère l'URL si elle existe
+            photo: data.photo || null
           });
         }
       } catch (error) {
@@ -75,10 +75,10 @@ export default function EditProfileScreen({ navigation }) {
   const pickImage = async () => {
     // Demander la permission (automatique sur les versions récentes, mais bonne pratique)
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Images seulement
-      allowsEditing: true, // Permet de recadrer (carré)
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+      allowsEditing: true, 
       aspect: [1, 1],
-      quality: 0.5, // Qualité moyenne pour ne pas être trop lourd
+      quality: 0.5,
     });
 
     if (!result.canceled) {
@@ -93,8 +93,6 @@ export default function EditProfileScreen({ navigation }) {
 
     setSaving(true);
     try {
-      // Note: Sauvegarder l'image locale dans Neo4j n'est pas idéal (il faudrait Firebase Storage).
-      // Ici on sauvegarde l'URI, ça marchera sur ton téléphone tant que tu ne désinstalles pas l'appli.
       const query = `
         MATCH (u:Utilisateur {id: $uid})
         SET u.nom = $nom,
@@ -111,7 +109,7 @@ export default function EditProfileScreen({ navigation }) {
         telephone: userInfo.phone,
         adresse: userInfo.address,
         metier: userInfo.metier,
-        photo: userInfo.photo // On sauvegarde le chemin de la photo
+        photo: userInfo.photo 
       };
 
       await runCypher(query, params);

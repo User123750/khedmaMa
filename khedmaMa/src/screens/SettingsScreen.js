@@ -94,8 +94,6 @@ const SettingsScreen = ({ route, navigation }) => {
           <Text style={styles.menuText}>Modifier mon profil</Text>
           <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
-
-        {/* ✅ CORRECTION ICI : On passe l'utilisateur à l'écran de paiement */}
         <TouchableOpacity 
             style={styles.menuItem} 
             onPress={() => navigation.navigate('PaymentMethods', { user: user })}

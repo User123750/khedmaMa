@@ -86,7 +86,7 @@ export default function PaymentScreen({ route, navigation }) {
     } catch (e) { console.error(e); }
   };
 
-  // --- 3. SAUVEGARDER LA CARTE (CORRIGÉ ✅) ---
+  // --- 3. SAUVEGARDER LA CARTE 
   const handleSaveCard = async () => {
     if (!user) {
         Alert.alert("Erreur", "Utilisateur non identifié.");
@@ -153,7 +153,7 @@ export default function PaymentScreen({ route, navigation }) {
     }
   };
 
-  // --- 4. SUPPRESSION (DÉJÀ CORRECT ✅) ---
+  // --- 4. SUPPRESSION 
   const handleDeleteCard = (id) => {
     Alert.alert("Supprimer", "Retirer cette carte ?", [
       { text: "Annuler", style: "cancel" },

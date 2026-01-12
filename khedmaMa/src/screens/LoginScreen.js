@@ -57,7 +57,6 @@ const LoginScreen = ({ navigation }) => {
 
         console.log(`Connexion de ${cleanUser.nom} | Rôle détecté : ${cleanUser.role}`);
 
-        // 3. Redirection selon le rôle détecté
         if (cleanUser.role === 'PRESTATAIRE') {
             navigation.replace('ProApp', { user: cleanUser });
         } else {

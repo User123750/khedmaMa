@@ -8,8 +8,6 @@ import { MaterialCommunityIcons, Ionicons, FontAwesome5, Feather } from '@expo/v
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-
-// Services
 import { runCypher } from '../services/neo4jService';
 import { auth } from '../config/firebase';
 import { deleteUser } from 'firebase/auth';
@@ -58,7 +56,7 @@ const ProProfileScreen = ({ route, navigation }) => {
     }).start();
   }, []);
 
-  // 🔄 CHARGEMENT DES DONNÉES DEPUIS NEO4J
+  //  CHARGEMENT DES DONNÉES DEPUIS NEO4J
   const fetchProfileData = async () => {
     try {
       // Requête pour récupérer les infos PRO + Calculer les stats en même temps
@@ -167,7 +165,7 @@ const ProProfileScreen = ({ route, navigation }) => {
     setSpecialites(newSpec);
   };
 
-  // 💾 MISE À JOUR DU PROFIL (UPDATE)
+  //  MISE À JOUR DU PROFIL (UPDATE)
   const handleUpdateProfile = async () => {
     // Validation basique
     if (!formData.metier || !formData.tarif || !formData.telephone) {
@@ -206,7 +204,7 @@ const ProProfileScreen = ({ route, navigation }) => {
         ville: formData.ville,
         specialites: specialites,
         estDisponible: isAvailable,
-        photo: image || '' // Note: En prod, il faut upload l'image sur Firebase Storage et mettre l'URL ici
+        photo: image || '' 
       };
 
       await runCypher(query, params);
@@ -221,7 +219,7 @@ const ProProfileScreen = ({ route, navigation }) => {
     }
   };
 
-  // 🗑️ SUPPRESSION DU COMPTE (DELETE)
+  //  SUPPRESSION DU COMPTE (DELETE)
   const confirmDelete = async () => {
     setLoading(true);
     try {
@@ -471,8 +469,6 @@ const ProProfileScreen = ({ route, navigation }) => {
     </SafeAreaView>
   );
 };
-
-// ... Les styles restent identiques à ceux que tu avais, tu peux les garder tels quels ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
   scrollContent: { paddingBottom: 40 },

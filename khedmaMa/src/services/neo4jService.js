@@ -2,7 +2,7 @@
 import neo4j from 'neo4j-driver';
 
 // Assure-toi que c'est bien ton IP locale ici
-const NEO4J_URL = 'bolt://192.168.11.104:7687';
+const NEO4J_URL = 'bolt://10.181.182.244:7687';
 const NEO4J_USER = 'neo4j';
 const NEO4J_PASSWORD = '12345678';
 
@@ -11,7 +11,7 @@ const driver = neo4j.driver(
     NEO4J_URL,
     neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD),
     { 
-        encrypted: false // 👈 C'EST LA CLÉ ! (Désactive SSL pour le local)
+        encrypted: false 
     }
 );
 

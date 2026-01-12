@@ -39,7 +39,6 @@ export default function NotificationsScreen({ route }) {
         
         const records = await runCypher(query, params);
         
-        // On formate les données
         const notifs = records.map(record => {
             const props = record.get('n').properties;
             return {
@@ -47,7 +46,7 @@ export default function NotificationsScreen({ route }) {
                 type: props.type || 'system',
                 title: props.titre || 'Notification',
                 message: props.message || '',
-                time: props.dateString || 'Récemment', // On simplifie la date pour l'instant
+                time: props.dateString || 'Récemment', 
                 read: props.lu || false
             };
         });
@@ -65,9 +64,9 @@ export default function NotificationsScreen({ route }) {
 
   const getIcon = (type) => {
     switch (type) {
-      case 'order': return { name: 'calendar-check', color: '#4CAF50' }; // Vert
-      case 'promo': return { name: 'tag', color: '#FF9800' }; // Orange
-      case 'system': return { name: 'information', color: '#2196f3' }; // Bleu
+      case 'order': return { name: 'calendar-check', color: '#4CAF50' }; 
+      case 'promo': return { name: 'tag', color: '#FF9800' }; 
+      case 'system': return { name: 'information', color: '#2196f3' }; 
       default: return { name: 'bell', color: '#777' };
     }
   };
